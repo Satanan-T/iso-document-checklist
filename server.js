@@ -48,6 +48,7 @@ const upload = multer({ storage: storage });
 // Express Middlewares
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname)); // Fallback in case index.html was uploaded to the root of the repository
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Database Schema Setup
