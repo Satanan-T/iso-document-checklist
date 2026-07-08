@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocFlow // Document Mindmapping (Offline Demo)</title>
+    <!-- Google Fonts: Inter & Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar: Checklist Lists -->
+        <aside class="sidebar">
+            <!-- Expanded Sidebar Content -->
+            <div class="sidebar-expanded-content">
+                <div class="sidebar-header">
+                    <div class="logo-area">
+                        <div class="logo">
+                            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            <span>DocFlow Map</span>
+                        </div>
+                        <span class="demo-tag">MINDMAP DEMO</span>
+                        <button id="btn-theme-toggle" class="btn-theme-toggle" title="สลับโหมด มืด/สว่าง">
+                            <svg class="theme-icon-sun hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                            </svg>
+                            <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <button id="btn-add-checklist" class="btn-primary" title="สร้างรายการเช็คลิสต์ใหม่">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>เพิ่มเช็คลิสต์</span>
+                    </button>
+                </div>
+                
+                <div class="sidebar-search">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="search-checklists" placeholder="ค้นหาเช็คลิสต์...">
+                    </div>
+                </div>
+
+                <div class="checklist-menu" id="checklist-list">
+                    <!-- Checklist items will be rendered here dynamically -->
+                    <div class="skeleton-loader">
+                        <div class="skeleton-item"></div>
+                        <div class="skeleton-item"></div>
+                        <div class="skeleton-item"></div>
+                    </div>
+                </div>
+
+                <!-- Integrated Sidebar Activity Log Panel (No longer overlays canvas) -->
+                <section id="activity-log-panel" class="activity-log-panel">
+                    <div class="log-header">
+                        <div class="log-title-area">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <h3>ประวัติการแก้ไข</h3>
+                        </div>
+                        <button id="btn-clear-log" class="btn-clear-log" title="ล้างประวัติทั้งหมด">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="log-timeline" id="log-timeline">
+                        <!-- Log entries will be rendered here dynamically -->
+                    </div>
+                    <div id="no-log-state" class="no-log-state hidden">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <p>ยังไม่มีประวัติการแก้ไข</p>
+                    </div>
+                </section>
+                
+                <div class="sidebar-footer">
+                    <p>DocFlow v1.2 • Mindmapping Demo</p>
+                </div>
+            </div>
+
+            <!-- Collapsed Sidebar Content -->
+            <div class="sidebar-collapsed-content">
+                <button id="btn-sidebar-expand" class="btn-sidebar-toggle-collapsed" title="แสดงแถบเมนูด้านซ้าย">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="sidebar-collapsed-active-title" id="collapsed-active-title" title="คลิกเพื่อขยายแถบเมนูออกทางขวา">
+                    ISO-17025 Document
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state">
+                <div class="empty-icon-wrapper">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                </div>
+                <h2>ยินดีต้อนรับสู่ DocFlow Map</h2>
+                <p>ระบบจัดการเช็คลิสต์ในรูปแบบกระดาน Mindmap ลากวางกระดาษโน้ตและโยงเส้นเชื่อมความสัมพันธ์ของเอกสารได้อย่างอิสระ</p>
+                <button id="btn-create-first" class="btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>สร้างเช็คลิสต์แรก</span>
+                </button>
+            </div>
+
+            <!-- Active Checklist Panel -->
+            <div id="active-checklist-panel" class="active-checklist-panel hidden">
+                <!-- Checklist Details Header -->
+                <header class="checklist-header">
+                    <div class="header-main">
+                        <div class="title-area" style="display: flex; align-items: center; gap: 14px;">
+                            <button id="btn-toggle-sidebar" class="btn-sidebar-toggle" title="ซ่อน/แสดง แถบเมนูด้านซ้าย">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                                </svg>
+                            </button>
+                            <div style="flex: 1;">
+                                <h1 id="checklist-title" contenteditable="true" title="คลิกเพื่อแก้ไขชื่อเช็คลิสต์"></h1>
+                                <p id="checklist-desc" contenteditable="true" title="คลิกเพื่อแก้ไขคำอธิบาย"></p>
+                            </div>
+                        </div>
+                        <div class="header-actions">
+                            <button id="btn-toggle-log" class="btn-log" title="ดูประวัติการแก้ไข">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                <span>ประวัติ</span>
+                                <span class="log-badge" id="log-badge">0</span>
+                            </button>
+                            <button id="btn-delete-checklist" class="btn-danger" title="ลบเช็คลิสต์นี้">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                                </svg>
+                                <span>ลบเช็คลิสต์</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Progress Statistics Bar -->
+                    <div class="progress-container">
+                        <div class="progress-meta">
+                            <span class="progress-percent" id="progress-percent">0% สำเร็จ</span>
+                            <span class="progress-counts">
+                                <span class="count-during"><span id="count-during-val">0</span> กำลังทำ</span>
+                                <span class="count-divider">|</span>
+                                <span class="count-complete"><span id="count-complete-val">0</span> เสร็จสิ้น</span>
+                            </span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="progress-bar-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Mindmap Canvas Container -->
+                <div class="canvas-container" id="canvas-container">
+                    <div class="canvas-zoom-wrapper" id="canvas-zoom-wrapper">
+                        <!-- SVG Overlay for drawing connections -->
+                        <svg class="canvas-svg" id="canvas-svg">
+                            <defs>
+                                <!-- Markers for path arrows -->
+                                <marker id="arrow-during" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b" />
+                                </marker>
+                                <marker id="arrow-complete" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+                                </marker>
+                            </defs>
+                        </svg>
+
+                        <!-- Interactive Canvas Area -->
+                        <div class="mindmap-canvas" id="mindmap-canvas">
+                            <!-- Notepad tasks will be rendered here dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Floating Zoom Controls in bottom-right corner -->
+                    <div class="zoom-controls">
+                        <button id="btn-zoom-out" class="zoom-btn" title="ซูมออก (ย่อ)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
+                        <span id="zoom-text">100%</span>
+                        <button id="btn-zoom-in" class="zoom-btn" title="ซูมเข้า (ขยาย)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
+                        <button id="btn-zoom-reset" class="zoom-btn-reset" title="รีเซ็ตซูม 100%">100%</button>
+                    </div>
+                </div>
+
+                <!-- Floating Canvas Toolbar -->
+                <div class="canvas-toolbar">
+                    <form id="form-add-task" class="add-task-form-floating">
+                        <input type="text" id="input-task-name" placeholder="เพิ่มกระดาษโน้ตเอกสารใหม่..." required>
+                        <button type="submit" class="btn-add-task-floating" title="เพิ่มแผ่นโน้ต">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
+                    </form>
+                    <div class="toolbar-divider"></div>
+                    <div class="filter-controls-floating">
+                        <button class="filter-btn active" data-filter="all">ทั้งหมด</button>
+                        <button class="filter-btn" data-filter="during">กำลังทำ</button>
+                        <button class="filter-btn" data-filter="complete">เสร็จแล้ว</button>
+                    </div>
+                    <div class="toolbar-divider"></div>
+                    <button id="btn-auto-layout" class="btn-tool-icon" title="จัดเรียงตำแหน่งโน้ตอัตโนมัติ">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Hidden file input for attachments -->
+                <input type="file" id="task-file-input" style="display: none;">
+
+                <!-- Activity Log Panel -->
+                <section id="activity-log-panel" class="activity-log-panel hidden">
+                    <div class="log-header">
+                        <div class="log-title-area">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <h3>ประวัติการแก้ไข</h3>
+                        </div>
+                        <button id="btn-clear-log" class="btn-clear-log" title="ล้างประวัติทั้งหมด">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            <span>ล้างประวัติ</span>
+                        </button>
+                    </div>
+                    <div class="log-timeline" id="log-timeline">
+                        <!-- Log entries will be rendered here dynamically -->
+                    </div>
+                    <div id="no-log-state" class="no-log-state hidden">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <p>ยังไม่มีประวัติการแก้ไข</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">บันทึกเรียบร้อยแล้ว</div>
+
+    <script src="app.js"></script>
+</body>
+</html>

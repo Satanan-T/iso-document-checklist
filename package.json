@@ -1,0 +1,19 @@
+{
+  "name": "document-checklist",
+  "version": "1.1.0",
+  "description": "Document checklist web application with SQLite backend, WebSocket synchronization, related document referencing, and file attachments",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "sqlite3": "^5.1.7",
+    "ws": "^8.16.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
