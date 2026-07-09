@@ -96,6 +96,35 @@ function initDatabase() {
             FOREIGN KEY (checklist_id) REFERENCES checklists(id) ON DELETE CASCADE
         )`);
 
+        // Check if we need to migrate the tasks table schema (for old database upgrade)
+        db.all("PRAGMA table_info(tasks)", (err, columns) => {
+            if (err) {
+                console.error("Error reading table info:", err);
+                return;
+            }
+            
+            const columnNames = columns.map(c => c.name);
+            
+            db.serialize(() => {
+                if (!columnNames.includes('x')) {
+                    console.log("Migration: Adding column x to tasks table");
+                    db.run("ALTER TABLE tasks ADD COLUMN x INTEGER DEFAULT 0");
+                }
+                if (!columnNames.includes('y')) {
+                    console.log("Migration: Adding column y to tasks table");
+                    db.run("ALTER TABLE tasks ADD COLUMN y INTEGER DEFAULT 0");
+                }
+                if (!columnNames.includes('notes')) {
+                    console.log("Migration: Adding column notes to tasks table");
+                    db.run("ALTER TABLE tasks ADD COLUMN notes TEXT DEFAULT ''");
+                }
+                if (!columnNames.includes('related_task_ids')) {
+                    console.log("Migration: Adding column related_task_ids to tasks table");
+                    db.run("ALTER TABLE tasks ADD COLUMN related_task_ids TEXT DEFAULT '[]'");
+                }
+            });
+        });
+
         // Check if database is empty to insert default data
         db.get("SELECT count(*) as count FROM checklists", (err, row) => {
             if (row && row.count === 0) {

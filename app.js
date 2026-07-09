@@ -651,9 +651,14 @@ function renderTasks() {
         
         // --- Notepad Card Event Listeners ---
         
-        // Drag Setup
-        const dragHandle = cardEl.querySelector('.notepad-drag-handle');
-        dragHandle.addEventListener('mousedown', (e) => startDrag(e, task, cardEl));
+        // Drag Setup: Allow dragging by clicking anywhere on the card, except on interactive elements
+        cardEl.addEventListener('mousedown', (e) => {
+            const interactiveSelectors = 'input, select, textarea, button, a, [contenteditable="true"], .multi-select-options, label';
+            if (e.target.closest(interactiveSelectors)) {
+                return; // Let the browser handle standard text/input interactions
+            }
+            startDrag(e, task, cardEl);
+        });
         
         // Click to toggle status
         const statusBtn = cardEl.querySelector('.notepad-status-btn');
