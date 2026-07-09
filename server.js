@@ -67,7 +67,10 @@ function initDatabase() {
             checklist_id TEXT,
             name TEXT NOT NULL,
             status TEXT DEFAULT 'during',
-            related_task_id TEXT,
+            related_task_ids TEXT, /* Stored as JSON string array */
+            x INTEGER DEFAULT 0,
+            y INTEGER DEFAULT 0,
+            notes TEXT DEFAULT '',
             FOREIGN KEY (checklist_id) REFERENCES checklists(id) ON DELETE CASCADE
         )`);
 
@@ -102,45 +105,68 @@ function initDatabase() {
     });
 }
 
+function getISO17025Tasks() {
+    return [
+        // Column 1: SD (Standard / Specification) - Foundation Documents (x = 80)
+        { id: 'task-sd-401', name: 'SD-401-01 จรรยาบรรณ ความเป็นกลางและรักษาความลับ', status: 'during', related_task_ids: [], x: 80, y: 50, notes: '' },
+        { id: 'task-sd-503', name: 'SD-503-01 Lab Scope', status: 'during', related_task_ids: [], x: 80, y: 280, notes: '' },
+        { id: 'task-sd-505', name: 'SD-505-01 ผังโครงสร้างของฝ่ายห้องปฏิบัติการ', status: 'during', related_task_ids: [], x: 80, y: 510, notes: '' },
+        { id: 'task-sd-506', name: 'SD-506-01 แต่งตั้ง Lab manager', status: 'during', related_task_ids: [], x: 80, y: 740, notes: '' },
+        { id: 'task-sd-802-1', name: 'SD-802-01 นโยบายห้องปฏิบัติการ (Lab Policy)', status: 'during', related_task_ids: [], x: 80, y: 970, notes: '' },
+        { id: 'task-sd-802-2', name: 'SD-802-02 ตัวชี้วัดคุณภาพ- KPI', status: 'during', related_task_ids: [], x: 80, y: 1200, notes: '' },
+
+        // Column 2: QP (Quality Procedure) - Procedures (x = 440)
+        { id: 'task-qp-401', name: 'QP-401-01 ความเป็นกลาง', status: 'during', related_task_ids: ['task-sd-401'], x: 440, y: 50, notes: '' },
+        { id: 'task-qp-402', name: 'QP-402-02 การรักษาความลับของลูกค้า', status: 'during', related_task_ids: ['task-sd-401'], x: 440, y: 280, notes: '' },
+        { id: 'task-qp-602', name: 'QP-602-01 ความสามารถและการฝึกอบรมบุคลากร', status: 'during', related_task_ids: [], x: 440, y: 510, notes: '' },
+        { id: 'task-qp-603', name: 'QP-603-01 สิ่งอำนวยความสะดวกและภาวะแวดล้อม', status: 'during', related_task_ids: [], x: 440, y: 740, notes: '' },
+        { id: 'task-qp-803', name: 'QP-803-01 Rev. 00 การควบคุมเอกสาร', status: 'during', related_task_ids: [], x: 440, y: 970, notes: '' },
+        { id: 'task-qp-804', name: 'QP-804-01 การควบคุมบันทึก (Pass)', status: 'during', related_task_ids: [], x: 440, y: 1200, notes: '' },
+
+        // Column 3: FM (Form) - Operational Forms & Records (x = 800)
+        { id: 'task-fm-505', name: 'FM-505-01 Job Description', status: 'during', related_task_ids: ['task-sd-505', 'task-sd-506'], x: 800, y: 50, notes: '' },
+        { id: 'task-fm-602-1', name: 'FM-602-01 แผนฝึกอบรมบุคลากรประจำปี', status: 'during', related_task_ids: ['task-qp-602'], x: 800, y: 280, notes: '' },
+        { id: 'task-fm-602-2', name: 'FM-602-02 แบบประเมินผลการฝึกอบรมภายใน', status: 'during', related_task_ids: ['task-qp-602'], x: 800, y: 510, notes: '' },
+        { id: 'task-fm-602-3', name: 'FM-602-03 แบบประเมินผลการฝึกอบรมในงาน (OJT)', status: 'during', related_task_ids: ['task-qp-602'], x: 800, y: 740, notes: '' },
+        { id: 'task-fm-602-4', name: 'FM-602-04 แบบบันทึกประวัติการฝึกอบรมบุคลากร', status: 'during', related_task_ids: ['task-qp-602'], x: 800, y: 970, notes: '' },
+        { id: 'task-fm-603-1', name: 'FM-603-01 แบบบันทึกสภาวะแวดล้อมห้องปฏิบัติการ', status: 'during', related_task_ids: ['task-qp-603'], x: 800, y: 1200, notes: '' },
+        { id: 'task-fm-603-2', name: 'FM-603-02 แบบบันทึกการเข้า - ออก ห้องปฏิบัติการ', status: 'during', related_task_ids: ['task-qp-603'], x: 800, y: 1430, notes: '' }
+    ];
+}
+
 function insertDefaultData() {
     console.log("Inserting default mock data...");
     const defaultData = [
         {
-            id: 'cl-1',
-            title: 'ยื่นภาษีเงินได้บุคคลธรรมดา',
-            description: 'รายการเอกสารและหลักฐานสำหรับลดหย่อนภาษีประจำปี',
-            tasks: [
-                { id: 'task-1-1', name: 'หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)', status: 'complete', related_task_id: null },
-                { id: 'task-1-2', name: 'รายการลดหย่อนเบี้ยประกันชีวิต', status: 'during', related_task_id: null },
-                { id: 'task-1-3', name: 'เอกสารยืนยันสิทธิลดหย่อนค่าอุปการะเลี้ยงดูบิดามารดา', status: 'during', related_task_id: null },
-                { id: 'task-1-4', name: 'ใบเสร็จรับเงินบริจาค/ทำบุญ', status: 'during', related_task_id: null },
-                { id: 'task-1-5', name: 'ข้อมูลเงินปันผลหรือดอกเบี้ยธนาคาร', status: 'complete', related_task_id: null }
-            ]
+            id: 'cl-iso-17025',
+            title: 'ISO-17025 Document',
+            description: 'รายการเอกสารระบบบริหารงานคุณภาพห้องปฏิบัติการทดสอบและสอบเทียบ (ISO/IEC 17025:2017)',
+            tasks: getISO17025Tasks()
         },
         {
             id: 'cl-2',
             title: 'เอกสารยื่นขอวีซ่าเชงเกน',
             description: 'เอกสารจำเป็นสำหรับยื่นขอวีซ่าท่องเที่ยวกลุ่มประเทศยุโรป',
             tasks: [
-                { id: 'task-2-1', name: 'หนังสือเดินทาง (Passport) มีอายุมากกว่า 6 เดือน', status: 'complete', related_task_id: null },
-                { id: 'task-2-2', name: 'ใบคำร้องขอวีซ่าที่กรอกข้อมูลครบถ้วน', status: 'complete', related_task_id: null },
-                { id: 'task-2-3', name: 'รูปถ่ายขนาด 2 นิ้ว พื้นหลังสีขาว 2 ใบ', status: 'complete', related_task_id: null },
-                { id: 'task-2-4', name: 'หนังสือรับรองการทำงาน (ภาษาอังกฤษ)', status: 'during', related_task_id: null },
-                { id: 'task-2-5', name: 'รายการเดินบัญชีย้อนหลัง 6 เดือน (Statement)', status: 'during', related_task_id: null },
-                { id: 'task-2-6', name: 'กรมธรรม์ประกันภัยการเดินทาง (Travel Insurance)', status: 'during', related_task_id: null },
-                { id: 'task-2-7', name: 'ตั๋วเครื่องบินและใบยืนยันการจองโรงแรม', status: 'during', related_task_id: null }
+                { id: 'task-2-1', name: 'หนังสือเดินทาง (Passport) มีอายุมากกว่า 6 เดือน', status: 'complete', related_task_ids: [], x: 60, y: 50, notes: '' },
+                { id: 'task-2-2', name: 'ใบคำร้องขอวีซ่าที่กรอกข้อมูลครบถ้วน', status: 'complete', related_task_ids: ['task-2-1'], x: 380, y: 50, notes: '' },
+                { id: 'task-2-3', name: 'รูปถ่ายขนาด 2 นิ้ว พื้นหลังสีขาว 2 ใบ', status: 'complete', related_task_ids: ['task-2-2'], x: 700, y: 50, notes: '' },
+                { id: 'task-2-4', name: 'หนังสือรับรองการทำงาน (ภาษาอังกฤษ)', status: 'during', related_task_ids: [], x: 60, y: 280, notes: '' },
+                { id: 'task-2-5', name: 'รายการเดินบัญชีย้อนหลัง 6 เดือน (Statement)', status: 'during', related_task_ids: ['task-2-4'], x: 380, y: 280, notes: '' },
+                { id: 'task-2-6', name: 'กรมธรรม์ประกันภัยการเดินทาง (Travel Insurance)', status: 'during', related_task_ids: [], x: 60, y: 510, notes: '' },
+                { id: 'task-2-7', name: 'ตั๋วเครื่องบินและใบยืนยันการจองโรงแรม', status: 'during', related_task_ids: ['task-2-6'], x: 380, y: 510, notes: '' }
             ]
         }
     ];
 
     db.serialize(() => {
         const stmtChecklist = db.prepare("INSERT INTO checklists (id, title, description) VALUES (?, ?, ?)");
-        const stmtTask = db.prepare("INSERT INTO tasks (id, checklist_id, name, status, related_task_id) VALUES (?, ?, ?, ?, ?)");
+        const stmtTask = db.prepare("INSERT INTO tasks (id, checklist_id, name, status, related_task_ids, x, y, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         
         defaultData.forEach(cl => {
             stmtChecklist.run(cl.id, cl.title, cl.description);
             cl.tasks.forEach(t => {
-                stmtTask.run(t.id, cl.id, t.name, t.status, t.related_task_id);
+                stmtTask.run(t.id, cl.id, t.name, t.status, JSON.stringify(t.related_task_ids || []), t.x || 0, t.y || 0, t.notes || '');
             });
         });
         
@@ -376,8 +402,8 @@ wss.on('connection', (ws) => {
 
                 case 'add_task':
                     db.run(
-                        "INSERT INTO tasks (id, checklist_id, name, status, related_task_id) VALUES (?, ?, ?, ?, ?)",
-                        [data.task.id, data.checklistId, data.task.name, data.task.status, null],
+                        "INSERT INTO tasks (id, checklist_id, name, status, related_task_ids, x, y, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        [data.task.id, data.checklistId, data.task.name, data.task.status, '[]', data.task.x || 60, data.task.y || 50, ''],
                         () => {
                             insertLog(data.checklistId, 'add_task', `"${data.task.name}"`);
                         }
@@ -422,15 +448,33 @@ wss.on('connection', (ws) => {
                     );
                     break;
 
-                case 'link_related_task':
+                case 'move_task':
                     db.run(
-                        "UPDATE tasks SET related_task_id = ? WHERE id = ?",
-                        [data.relatedTaskId, data.taskId],
+                        "UPDATE tasks SET x = ?, y = ? WHERE id = ?",
+                        [data.x, data.y, data.taskId],
                         () => {
-                            const msg = data.relatedTaskId 
-                                ? `อ้างอิงเอกสาร: "${data.taskName}" → "${data.relatedTaskName}"`
-                                : `ยกเลิกการอ้างอิงเอกสาร: "${data.taskName}"`;
-                            insertLog(data.checklistId, 'rename_task', msg);
+                            // Silently broadcast the new state to keep all clients updated
+                            broadcastStateUpdate();
+                        }
+                    );
+                    break;
+
+                case 'update_notes':
+                    db.run(
+                        "UPDATE tasks SET notes = ? WHERE id = ?",
+                        [data.notes, data.taskId],
+                        () => {
+                            insertLog(data.checklistId, 'rename_task', `อัปเดตบันทึกของ "${data.taskName}"`);
+                        }
+                    );
+                    break;
+
+                case 'link_related_tasks':
+                    db.run(
+                        "UPDATE tasks SET related_task_ids = ? WHERE id = ?",
+                        [JSON.stringify(data.relatedTaskIds), data.taskId],
+                        () => {
+                            insertLog(data.checklistId, 'rename_task', `อัปเดตการเชื่อมโยงของ "${data.taskName}"`);
                         }
                     );
                     break;
@@ -444,6 +488,56 @@ wss.on('connection', (ws) => {
                         }
                     );
                     return; // Skip normal broadcast as this doesn't log anything else
+
+                case 'import_data':
+                    console.log("Importing checklists from backup...");
+                    db.serialize(() => {
+                        db.run("DELETE FROM files");
+                        db.run("DELETE FROM logs");
+                        db.run("DELETE FROM tasks");
+                        db.run("DELETE FROM checklists", (err) => {
+                            if (err) {
+                                console.error("Truncate error on import:", err);
+                                return;
+                            }
+                            
+                            const stmtChecklist = db.prepare("INSERT INTO checklists (id, title, description) VALUES (?, ?, ?)");
+                            const stmtTask = db.prepare("INSERT INTO tasks (id, checklist_id, name, status, related_task_ids, x, y, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                            
+                            data.checklists.forEach(cl => {
+                                stmtChecklist.run(cl.id, cl.title, cl.description || '');
+                                
+                                if (Array.isArray(cl.tasks)) {
+                                    cl.tasks.forEach(t => {
+                                        stmtTask.run(
+                                            t.id, 
+                                            cl.id, 
+                                            t.name, 
+                                            t.status || 'during', 
+                                            JSON.stringify(t.related_task_ids || []), 
+                                            t.x || 0, 
+                                            t.y || 0, 
+                                            t.notes || ''
+                                        );
+                                    });
+                                }
+                                
+                                if (Array.isArray(cl.logs)) {
+                                    const stmtLog = db.prepare("INSERT INTO logs (id, checklist_id, action, detail, timestamp) VALUES (?, ?, ?, ?, ?)");
+                                    cl.logs.forEach(l => {
+                                        stmtLog.run(l.id, cl.id, l.action, l.detail, l.timestamp);
+                                    });
+                                    stmtLog.finalize();
+                                }
+                            });
+                            
+                            stmtChecklist.finalize();
+                            stmtTask.finalize();
+                            console.log("Backup checklists imported successfully.");
+                            broadcastStateUpdate();
+                        });
+                    });
+                    return; // Skip normal broadcast since serialize is async and calls broadcast itself
             }
         } catch (e) {
             console.error('Error handling WebSocket message:', e);
