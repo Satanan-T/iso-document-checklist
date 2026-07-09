@@ -971,7 +971,6 @@ function zoomIn() {
     setZoom(zoomScale + 0.1);
 }
 
-// Toggle zoom out
 function zoomOut() {
     setZoom(zoomScale - 0.1);
 }
