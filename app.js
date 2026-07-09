@@ -6,6 +6,10 @@ let uploadingTaskId = null; // Track task receiving file upload
 let zoomScale = 1.0; // Current zoom scale of the 2D Mindmap canvas (50% to 200%)
 let currentTheme = 'dark'; // 'dark' | 'light'
 
+// WebSocket Synchronization variables
+let socket = null;
+const isOfflineMode = window.location.protocol === 'file:' || window.location.hostname === '';
+
 // DOM Elements
 const sidebarSearch = document.getElementById('search-checklists');
 const checklistListContainer = document.getElementById('checklist-list');
@@ -44,6 +48,11 @@ const activityLogPanel = document.getElementById('activity-log-panel');
 const logTimeline = document.getElementById('log-timeline');
 const noLogState = document.getElementById('no-log-state');
 const btnClearLog = document.getElementById('btn-clear-log');
+
+// Backup elements
+const btnExportBackup = document.getElementById('btn-export-backup');
+const btnImportBackup = document.getElementById('btn-import-backup');
+const inputImportFile = document.getElementById('input-import-file');
 
 // Toast notice
 const toast = document.getElementById('toast');
@@ -115,6 +124,67 @@ const DEFAULT_DATA = [
     }
 ];
 
+// WebSocket Sync Connection Management
+function initWebSocket() {
+    if (isOfflineMode) {
+        console.log("Running in offline mode (LocalStorage only).");
+        return;
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}`;
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+        console.log("Connected to DocFlow Sync server.");
+        showToast("เชื่อมต่อระบบซิงก์ออนไลน์แล้ว");
+        document.title = "DocFlow // Document Mindmapping (Online Sync)";
+    };
+
+    socket.onmessage = (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            if (message.type === 'init' || message.type === 'sync') {
+                const oldActiveId = activeChecklistId;
+                checklists = message.checklists;
+                
+                // If there's no active checklist yet or old checklist got deleted, load first
+                if (activeChecklistId === null && checklists.length > 0) {
+                    activeChecklistId = checklists[0].id;
+                } else if (activeChecklistId !== null && !checklists.some(c => c.id === activeChecklistId)) {
+                    activeChecklistId = checklists.length > 0 ? checklists[0].id : null;
+                }
+                
+                renderChecklists(sidebarSearch.value);
+                if (activeChecklistId !== null) {
+                    renderActiveChecklistData();
+                } else {
+                    showEmptyState();
+                }
+            }
+        } catch (e) {
+            console.error("Error parsing WebSocket sync payload", e);
+        }
+    };
+
+    socket.onclose = () => {
+        console.log("Sync connection lost. Reconnecting in 3s...");
+        showToast("การเชื่อมต่อขาดหาย กำลังเชื่อมใหม่...");
+        document.title = "DocFlow // (Connecting...)";
+        setTimeout(initWebSocket, 3000);
+    };
+
+    socket.onerror = (err) => {
+        console.error("WebSocket error:", err);
+    };
+}
+
+function sendWSMessage(msg) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(msg));
+    }
+}
+
 // Initialize Application
 function init() {
     setupEventListeners();
@@ -132,6 +202,9 @@ function init() {
     } else {
         showEmptyState();
     }
+
+    // Connect WebSocket Sync if online
+    initWebSocket();
 }
 
 // Theme Management
@@ -227,6 +300,84 @@ function loadData() {
 // Save to LocalStorage
 function saveData() {
     localStorage.setItem('docflow_checklists', JSON.stringify(checklists));
+}
+
+// Export data to a JSON backup file
+function exportBackup() {
+    try {
+        const backupData = JSON.stringify(checklists, null, 2);
+        const blob = new Blob([backupData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        const dateStr = new Date().toISOString().split('T')[0];
+        a.href = url;
+        a.download = `docflow_backup_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('ส่งออกข้อมูลสำรองเรียบร้อยแล้ว');
+    } catch (e) {
+        console.error("Export backup failed", e);
+        showToast('ไม่สามารถส่งออกข้อมูลได้');
+    }
+}
+
+// Import data from a JSON backup file
+function importBackup(file) {
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            
+            // Validation: must be an array of checklists
+            if (!Array.isArray(parsed)) {
+                throw new Error("Invalid backup format: root must be an array of checklists.");
+            }
+            
+            if (parsed.length > 0 && (!parsed[0].id || !parsed[0].title)) {
+                throw new Error("Invalid backup format: checklist objects are missing required fields.");
+            }
+            
+            if (confirm(`คุณต้องการนำเข้าเช็คลิสต์จำนวน ${parsed.length} รายการหรือไม่? การนำเข้าจะเขียนทับข้อมูลทั้งหมดที่คุณมี ณ ขณะนี้`)) {
+                checklists = parsed;
+                saveData();
+                
+                if (!isOfflineMode) {
+                    // Sync to online server
+                    sendWSMessage({
+                        type: 'import_data',
+                        checklists: checklists
+                    });
+                } else {
+                    // Update offline rendering immediately
+                    if (checklists.length > 0) {
+                        activeChecklistId = checklists[0].id;
+                    } else {
+                        activeChecklistId = null;
+                    }
+                    renderChecklists(sidebarSearch.value);
+                    if (activeChecklistId !== null) {
+                        renderActiveChecklistData();
+                    } else {
+                        showEmptyState();
+                    }
+                    showToast('นำเข้าข้อมูลสำรองออฟไลน์เสร็จสมบูรณ์');
+                }
+            }
+        } catch (err) {
+            console.error("Import backup failed", err);
+            alert("ไม่สามารถนำเข้าไฟล์ได้: รูปแบบไฟล์สำรองไม่ถูกต้อง (" + err.message + ")");
+        }
+        
+        // Reset file input
+        inputImportFile.value = '';
+    };
+    reader.readAsText(file);
 }
 
 // Show Toast Alert
@@ -512,6 +663,14 @@ function renderTasks() {
                 });
                 addLogEntry('delete_task', `"${task.name}"`);
                 saveData();
+                
+                sendWSMessage({
+                    type: 'delete_task',
+                    checklistId: activeChecklistId,
+                    taskId: task.id,
+                    taskName: task.name
+                });
+                
                 renderActiveChecklistData();
                 renderChecklists(sidebarSearch.value);
                 showToast('ลบกระดาษโน้ตเรียบร้อยแล้ว');
@@ -527,6 +686,15 @@ function renderTasks() {
                 task.name = cleaned;
                 addLogEntry('rename_task', `"${oldName}" → "${cleaned}"`);
                 saveData();
+                
+                sendWSMessage({
+                    type: 'rename_task',
+                    checklistId: activeChecklistId,
+                    taskId: task.id,
+                    name: cleaned,
+                    oldName: oldName
+                });
+                
                 drawConnections(); // Redraw in case layout sizes shifted slightly
                 showToast('แก้ไขข้อความโน้ตแล้ว');
             } else {
@@ -548,6 +716,15 @@ function renderTasks() {
                 task.notes = cleaned;
                 addLogEntry('rename_task', `อัปเดตบันทึกของ "${task.name}"`);
                 saveData();
+                
+                sendWSMessage({
+                    type: 'update_notes',
+                    checklistId: activeChecklistId,
+                    taskId: task.id,
+                    taskName: task.name,
+                    notes: cleaned
+                });
+                
                 showToast('อัปเดตบันทึกโน้ตย่อแล้ว');
             }
         });
@@ -593,6 +770,15 @@ function renderTasks() {
                 
                 triggerBtn.textContent = `เชื่อมโยงเอกสาร (${task.related_task_ids.length})`;
                 saveData();
+                
+                sendWSMessage({
+                    type: 'link_related_tasks',
+                    checklistId: activeChecklistId,
+                    taskId: task.id,
+                    taskName: task.name,
+                    relatedTaskIds: task.related_task_ids
+                });
+                
                 drawConnections();
             });
         });
@@ -662,6 +848,13 @@ function startDrag(e, task, cardEl) {
         document.removeEventListener('mouseup', mouseUpHandler);
         
         saveData();
+        
+        sendWSMessage({
+            type: 'move_task',
+            taskId: task.id,
+            x: task.x,
+            y: task.y
+        });
     }
     
     document.addEventListener('mousemove', mouseMoveHandler);
@@ -887,6 +1080,15 @@ function toggleTaskStatus(taskId) {
     }
 
     saveData();
+    
+    sendWSMessage({
+        type: 'toggle_task_status',
+        checklistId: activeChecklistId,
+        taskId: task.id,
+        taskName: task.name,
+        status: task.status
+    });
+    
     renderActiveChecklistData();
     renderChecklists(sidebarSearch.value);
 }
@@ -907,6 +1109,14 @@ function addNewChecklist() {
     
     addLogEntry('create_checklist', 'สร้างเช็คลิสต์ใหม่');
     saveData();
+    
+    sendWSMessage({
+        type: 'create_checklist',
+        id: newChecklist.id,
+        title: newChecklist.title,
+        description: newChecklist.description
+    });
+    
     renderChecklists(sidebarSearch.value);
     renderActiveChecklistData();
     
@@ -928,8 +1138,15 @@ function deleteChecklist() {
     if (!activeChecklistId) return;
     
     if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบเช็คลิสต์นี้? เอกสารและไฟล์แนบย่อยทั้งหมดจะถูกลบออกถาวร')) {
+        const deletedId = activeChecklistId;
         checklists = checklists.filter(c => c.id !== activeChecklistId);
         saveData();
+        
+        sendWSMessage({
+            type: 'delete_checklist',
+            id: deletedId
+        });
+        
         showToast('ลบเช็คลิสต์เรียบร้อยแล้ว');
         
         if (checklists.length > 0) {
@@ -1079,6 +1296,12 @@ function clearLog() {
     if (confirm('คุณแน่ใจหรือว่าต้องการล้างประวัติการแก้ไขทั้งหมดสำหรับเช็คลิสต์นี้?')) {
         checklist.logs = [];
         saveData();
+        
+        sendWSMessage({
+            type: 'clear_log',
+            checklistId: activeChecklistId
+        });
+        
         renderActivityLog();
         updateLogBadge();
         showToast('ล้างประวัติการแก้ไขแล้ว');
@@ -1110,6 +1333,14 @@ function setupEventListeners() {
             checklist.title = newTitle;
             addLogEntry('rename_checklist', `"${oldTitle}" → "${newTitle}"`);
             saveData();
+            
+            sendWSMessage({
+                type: 'rename_checklist',
+                id: activeChecklistId,
+                title: newTitle,
+                oldTitle: oldTitle
+            });
+            
             renderChecklists(sidebarSearch.value);
             renderActiveChecklistData();
             showToast('อัปเดตชื่อเช็คลิสต์แล้ว');
@@ -1135,6 +1366,13 @@ function setupEventListeners() {
             checklist.description = newDesc;
             addLogEntry('update_desc', `คำอธิบายถูกอัปเดต`);
             saveData();
+            
+            sendWSMessage({
+                type: 'update_desc',
+                id: activeChecklistId,
+                description: newDesc
+            });
+            
             renderActiveChecklistData();
             showToast('อัปเดตคำอธิบายแล้ว');
         }
@@ -1167,7 +1405,7 @@ function setupEventListeners() {
             id: `task-${Date.now()}`,
             name: taskName,
             status: 'during',
-            related_task_id: null,
+            related_task_ids: [],
             files: [],
             x: Math.max(50, Math.min(2700, center_x)),
             y: Math.max(50, Math.min(2700, center_y))
@@ -1177,6 +1415,18 @@ function setupEventListeners() {
         
         addLogEntry('add_task', `"${taskName}"`);
         saveData();
+        
+        sendWSMessage({
+            type: 'add_task',
+            checklistId: activeChecklistId,
+            task: {
+                id: newTask.id,
+                name: newTask.name,
+                status: newTask.status,
+                x: newTask.x,
+                y: newTask.y
+            }
+        });
         
         inputTaskName.value = '';
         renderActiveChecklistData();
@@ -1254,6 +1504,20 @@ function setupEventListeners() {
     const btnThemeToggle = document.getElementById('btn-theme-toggle');
     if (btnThemeToggle) {
         btnThemeToggle.addEventListener('click', toggleTheme);
+    }
+
+    // Backup Actions Click Listeners
+    if (btnExportBackup) {
+        btnExportBackup.addEventListener('click', exportBackup);
+    }
+    if (btnImportBackup) {
+        btnImportBackup.addEventListener('click', () => inputImportFile.click());
+    }
+    if (inputImportFile) {
+        inputImportFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) importBackup(file);
+        });
     }
 }
 
