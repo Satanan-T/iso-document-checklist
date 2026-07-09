@@ -148,6 +148,9 @@ function initWebSocket() {
                 const oldActiveId = activeChecklistId;
                 checklists = message.checklists;
                 
+                // Verify schema and perform layout recovery on sync
+                verifyAndMigrateChecklists(checklists);
+                
                 // If there's no active checklist yet or old checklist got deleted, load first
                 if (activeChecklistId === null && checklists.length > 0) {
                     activeChecklistId = checklists[0].id;
@@ -231,6 +234,37 @@ function toggleTheme() {
     applyTheme(targetTheme);
 }
 
+// Verify schema and perform layout / relationship migrations
+function verifyAndMigrateChecklists(list) {
+    if (!Array.isArray(list)) return;
+    list.forEach(c => {
+        if (!Array.isArray(c.logs)) c.logs = [];
+        if (!Array.isArray(c.tasks)) c.tasks = [];
+        c.tasks.forEach((t, idx) => {
+            if (!Array.isArray(t.files)) t.files = [];
+            if (!Array.isArray(t.related_task_ids)) t.related_task_ids = [];
+            if (t.notes === undefined || t.notes === null) t.notes = '';
+            
+            // Migration: convert legacy single relation to multiple relation array
+            if (t.related_task_id) {
+                if (!t.related_task_ids.includes(t.related_task_id)) {
+                    t.related_task_ids.push(t.related_task_id);
+                }
+                delete t.related_task_id;
+            }
+            if (t.related_task_id === null) {
+                delete t.related_task_id;
+            }
+            
+            // Ensure coordinates exist and are not overlapping at (0, 0)
+            if (t.x === undefined || t.y === undefined || t.x === null || t.y === null || (t.x === 0 && t.y === 0)) {
+                t.x = 80 + (idx % 3) * 360;
+                t.y = 50 + Math.floor(idx / 3) * 230;
+            }
+        });
+    });
+}
+
 // Load from LocalStorage
 function loadData() {
     const savedData = localStorage.getItem('docflow_checklists');
@@ -251,32 +285,7 @@ function loadData() {
             }
 
             // Schema migration and verification
-            checklists.forEach(c => {
-                if (!Array.isArray(c.logs)) c.logs = [];
-                if (!Array.isArray(c.tasks)) c.tasks = [];
-                c.tasks.forEach((t, idx) => {
-                    if (!Array.isArray(t.files)) t.files = [];
-                    if (!Array.isArray(t.related_task_ids)) t.related_task_ids = [];
-                    if (t.notes === undefined) t.notes = '';
-                    
-                    // Migration: convert legacy single relation to multiple relation array
-                    if (t.related_task_id) {
-                        if (!t.related_task_ids.includes(t.related_task_id)) {
-                            t.related_task_ids.push(t.related_task_id);
-                        }
-                        delete t.related_task_id;
-                    }
-                    if (t.related_task_id === null) {
-                        delete t.related_task_id;
-                    }
-                    
-                    // Ensure coordinates exist
-                    if (t.x === undefined || t.y === undefined) {
-                        t.x = 60 + (idx % 3) * 320;
-                        t.y = 50 + Math.floor(idx / 3) * 230;
-                    }
-                });
-            });
+            verifyAndMigrateChecklists(checklists);
         } catch (e) {
             console.error('Error parsing local storage data', e);
             checklists = DEFAULT_DATA;
